@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.AI;
 
 public class PlayerController : MonoBehaviour
 {
     public float speed = 0;
     public TextMeshProUGUI countText;
     public GameObject winTextObject;
+    public TextMeshProUGUI timerText;     
+    public float enemySpeedUp = 0.3f;     
+    public NavMeshAgent enemyAgent;
 
 
 
@@ -16,6 +20,8 @@ public class PlayerController : MonoBehaviour
     private int count;
     private float movementX;
     private float movementY;
+    private float elapsed;                
+    private bool timerRunning = true;     
 
     void Start()
     {
@@ -27,6 +33,13 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    void Update()  // new function to update the timer
+    {
+        if (!timerRunning) return;
+        elapsed += Time.deltaTime;
+        timerText.text = "Time: " + elapsed.ToString("F1");
+    }
+
     void OnMove(InputValue movementValue)
     {
         Vector2 movementVector = movementValue.Get<Vector2>();
@@ -36,14 +49,23 @@ public class PlayerController : MonoBehaviour
 
     void SetCountText() 
     {
-        countText.text =  "Count: " + count.ToString();
+        countText.text = "Count: " + count.ToString();
         if (count >= 12)
         {
+            timerRunning = false;                                          
+            float best = PlayerPrefs.GetFloat("BestTime", float.MaxValue); 
+            if (elapsed < best)                                            
+            {
+                best = elapsed;
+                PlayerPrefs.SetFloat("BestTime", best);
+            }
             winTextObject.SetActive(true);
+            winTextObject.GetComponent<TextMeshProUGUI>().text =           
+                "You Win!\nTime: " + elapsed.ToString("F1") + "  Best: " + best.ToString("F1");
             Destroy(GameObject.FindGameObjectWithTag("Enemy"));
-
         }
     }
+
 
     void FixedUpdate()
     {
@@ -55,6 +77,7 @@ public class PlayerController : MonoBehaviour
     {
     if (collision.gameObject.CompareTag("Enemy"))
     {
+        timerRunning = false;    
         // Destroy the current object
         Destroy(gameObject); 
         // Update the winText to display "You Lose!"
@@ -70,6 +93,7 @@ public class PlayerController : MonoBehaviour
         {
             other.gameObject.SetActive(false);
             count = count + 1;
+            if (enemyAgent != null) enemyAgent.speed += enemySpeedUp;
             SetCountText();
 
 
